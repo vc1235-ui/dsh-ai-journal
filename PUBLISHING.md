@@ -7,7 +7,7 @@
 | 项 | 状态 |
 | --- | --- |
 | GitHub 公开仓库 | ✅ https://github.com/vc1235-ui/dsh-ai-journal |
-| npm 发布 | ✅ `dsh-ai-journal@0.1.0`（2026-11-06） |
+| npm 发布 | ✅ `dsh-ai-journal@0.1.1`（2026-11-06，含宿主认证修复） |
 | dshopen.org 收录申请 | ✅ 已提交 https://github.com/polang233/dsh-plugin-index/issues/283 |
 | DSH 社区插件市场 PR | ⏳ 待仓库满 24h（2026-11-07 13:00 SGT 之后） |
 
@@ -28,9 +28,9 @@
 | 许可证 | ✅ MIT |
 | 图标（180×180 PNG） | ✅ `assets/icon-180.png` |
 | 离线测试 | ✅ 105 项（聚合 22 + 忽略存储 3 + 面板 80） |
-| npm 发布 | ⏳ `npm publish` 后完成 |
+| npm 发布 | ✅ `dsh-ai-journal@0.1.1` |
 
-## 1. npm 发布（✅ 已完成 0.1.0）
+## 1. npm 发布（✅ 已完成 0.1.1）
 
 包名 `dsh-ai-journal` 已确认在 npm registry 上可用（当前 404）。若没有 npm 账号：打开 https://www.npmjs.com/signup 注册（用户名 + 邮箱 + 密码，验证邮件），然后执行下面的命令。
 

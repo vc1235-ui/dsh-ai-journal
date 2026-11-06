@@ -95,7 +95,7 @@ node scripts/verify.mjs --url http://127.0.0.1:3080 --token <launch-token>
 
 ## 市场收录
 
-- npm：[`dsh-ai-journal`](https://www.npmjs.com/package/dsh-ai-journal) ✅
+- npm：[`dsh-ai-journal@0.1.1`](https://www.npmjs.com/package/dsh-ai-journal) ✅
 - 开放插件市场（dshopen.org）：收录申请已提交（[#283](https://github.com/polang233/dsh-plugin-index/issues/283)）⏳
 - DSH 社区插件市场（awesome-dsh-plugin 镜像）：待仓库满 24h 后提交 PR ⏳
 
