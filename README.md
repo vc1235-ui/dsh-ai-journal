@@ -85,7 +85,11 @@ node scripts/verify.mjs http://127.0.0.1:3080
 
 ## 市场收录
 
-发布与收录流程见 [PUBLISHING.md](PUBLISHING.md)：npm 发布 → dshopen.org 收录 issue → 仓库满 24h 后提交 awesome-dsh-plugin PR（DSH 社区插件市场镜像自动收录）。
+- npm：[`dsh-ai-journal`](https://www.npmjs.com/package/dsh-ai-journal) ✅
+- 开放插件市场（dshopen.org）：收录申请已提交（[#283](https://github.com/polang233/dsh-plugin-index/issues/283)）⏳
+- DSH 社区插件市场（awesome-dsh-plugin 镜像）：待仓库满 24h 后提交 PR ⏳
+
+完整流程见 [PUBLISHING.md](PUBLISHING.md)。
 
 ## License
 

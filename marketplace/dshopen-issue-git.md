@@ -1,3 +1,5 @@
+# 未使用：npm 已发布 0.1.0，实际提交的是版本化申请（见 `dshopen-issue.md`）。保留此固定提交方案作为参考。
+
 ### 插件地址 / Plugin link
 
 https://github.com/vc1235-ui/dsh-ai-journal （仓库根即插件包根目录，无子目录）
