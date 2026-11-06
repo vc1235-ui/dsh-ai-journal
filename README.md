@@ -83,6 +83,10 @@ node test/client.test.cjs              # 面板渲染 80 项（vm + mock）
 node scripts/verify.mjs http://127.0.0.1:3080
 ```
 
+## 市场收录
+
+发布与收录流程见 [PUBLISHING.md](PUBLISHING.md)：npm 发布 → dshopen.org 收录 issue → 仓库满 24h 后提交 awesome-dsh-plugin PR（DSH 社区插件市场镜像自动收录）。
+
 ## License
 
 [MIT](LICENSE)
