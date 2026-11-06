@@ -10,7 +10,7 @@ https://github.com/vc1235-ui/dsh-ai-journal （仓库根即插件包根目录，
 
 - 尚未发布 npm（作者暂无 npm 账号），按「固定 Git 提交」方式申请收录：
   - 版本：`0.1.0`
-  - 完整提交 SHA：`37277904f925bd6aaf35aa53ebb72b3f4f358ffc`
+  - 完整提交 SHA：`85e3371f791605a9576bc49455539ca1fa01fd7f`
   - 该目录可直接安装：含 `package.json`、`cordis.patch.yml`（`dsh.bundle.patch`）与全部运行文件，无构建步骤；
 - 预构建 tarball（同一提交，`npm pack` 产物）：https://github.com/vc1235-ui/dsh-ai-journal/releases/download/v0.1.0/dsh-ai-journal-0.1.0.tgz
 - 已验证 DSH `0.2.1-rc.5` / Web profile；`engines.dsh: >=0.2.1-rc.5`；许可证 MIT；仓库公开；

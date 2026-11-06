@@ -72,7 +72,7 @@ gh pr create --repo awesome-dsh-plugin/awesome-dsh-plugin --title "Add vc1235-ui
 
 - 仓库根已附预构建 tarball（`npm pack` 产物，与 `v0.1.0` 同一提交）：`https://github.com/vc1235-ui/dsh-ai-journal/releases/download/v0.1.0/dsh-ai-journal-0.1.0.tgz`；
 - awesome 条目已加 `tarball:` 字段（见 `marketplace/awesome-dsh-plugin-entry.yml`）；
-- dshopen 投稿改用 `marketplace/dshopen-issue-git.md`（固定提交 `37277904f925bd6aaf35aa53ebb72b3f4f358ffc`，版本 `0.1.0`）。
+- dshopen 投稿改用 `marketplace/dshopen-issue-git.md`（固定提交 `85e3371f791605a9576bc49455539ca1fa01fd7f`，版本 `0.1.0`）。
 
 ## 3. 开放插件市场（dshopen.org）
 
