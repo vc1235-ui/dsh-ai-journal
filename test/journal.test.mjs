@@ -6,6 +6,8 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import os from 'node:os';
+import path from 'node:path';
 
 import {
   addDaysKey,
@@ -128,11 +130,12 @@ test('时区：非法时区回落到 Asia/Singapore', () => {
   assert.equal(normalizeTimeZone('UTC'), 'UTC');
 });
 
-test('项目标签：临时目录、主目录、普通目录', () => {
+test('项目标签：临时目录、主目录、普通目录（不绑定具体用户名/平台）', () => {
+  const home = os.homedir();
   assert.equal(projectLabel('/tmp/abc'), '临时目录');
   assert.equal(projectLabel('/private/tmp/x'), '临时目录');
-  assert.equal(projectLabel('/Users/sunxx'), '主目录');
-  assert.equal(projectLabel('/Users/sunxx/Documents/个人AI'), '个人AI');
+  assert.equal(projectLabel(home.replace(/[/\\]+$/, '')), '主目录');
+  assert.equal(projectLabel(path.join(home, 'Documents', '个人AI')), '个人AI');
   assert.equal(projectLabel(undefined), '无工作目录');
 });
 
