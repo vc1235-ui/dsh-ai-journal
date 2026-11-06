@@ -3,25 +3,52 @@
  * 自检 dsh-ai-journal 是否已在运行中的 DSH Web 里生效（只读；仅用合成 key 做 dismiss→restore 往返，结束时恢复原状）。
  *
  * 检查项：
+ *   0. GET /ai-journal/api?kind=meta（不带 cookie）→ 401（宿主认证 fence 生效）
  *   1. GET /ai-journal/api?kind=meta              → Host 半区路由已挂载、数据服务在位
  *   2. GET /ai-journal/api?kind=daily&…           → 日报 JSON 形状正确
  *   3. GET /ai-journal/api?kind=weekly&…          → 周报 JSON 形状正确且 days 为 7 天
- *   4. GET /ai-journal/api 带跨站 Origin          → 被 403 拒绝（本机同源 fence）
+ *   4. GET /ai-journal/api 带跨站 Origin          → 被 403 拒绝（Host/Origin fence）
  *   5. POST /ai-journal/api                       → 405（只读接口，仅 /followups 支持 POST）
  *   6. POST /ai-journal/api/followups             → dismiss/restore 往返；非法 action 400、非 JSON 415
- *   6. GET /                                      → 浏览器启动图包含插件；需要浏览器登录
- *                                                  cookie，CLI 拿不到时记为 SKIP 而不是 FAIL
- *   7. 启动图里的 /plugins 组合脚本可下载          → 同上，依赖第 6 项
+ *   7. GET /                                      → 浏览器启动图包含插件
+ *   8. 启动图里的 /plugins 组合脚本可下载
  *
- * 用法：node scripts/ai-journal-verify.mjs [--url http://127.0.0.1:3080]
+ * 除第 0 项外都需要 DSH Web 登录会话。用 `--token <dsh web 启动时打印的 ?token=…>` 换取
+ * 登录 cookie（脚本自己走一次 /?token= 的 303 兑换），也可以直接传带 token 的 URL。
+ * 没有 token 时认证相关检查记 SKIP 而不误报 FAIL。
+ *
+ * 用法：node scripts/ai-journal-verify.mjs [--url http://127.0.0.1:3080] [--token <launch-token>]
  * 任一 FAIL 时退出码为 1；SKIP 不影响退出码，但会在结尾列出。
  */
 
 const argv = process.argv.slice(2);
 const urlIndex = argv.indexOf('--url');
-const BASE = (urlIndex >= 0 ? argv[urlIndex + 1] : process.env.DSH_WEB_URL) || 'http://127.0.0.1:3080';
+const tokenIndex = argv.indexOf('--token');
+const rawBase = (urlIndex >= 0 ? argv[urlIndex + 1] : process.env.DSH_WEB_URL) || 'http://127.0.0.1:3080';
+const baseUrl = new URL(rawBase);
+const TOKEN = tokenIndex >= 0 ? argv[tokenIndex + 1] : (process.env.DSH_WEB_TOKEN || baseUrl.searchParams.get('token') || '');
+baseUrl.searchParams.delete('token');
+const BASE = baseUrl.href.replace(/\/$/, '');
 /** 与 BASE 同源的 Origin，用于通过 Host 半区的同源 fence。 */
-const ORIGIN = new URL(BASE).origin;
+const ORIGIN = baseUrl.origin;
+
+/** 登录 cookie（`/?token=` 兑换得到）；为空时认证相关检查 SKIP。 */
+let COOKIE = '';
+
+async function login() {
+  if (!TOKEN) return false;
+  const response = await fetch(`${BASE}/?token=${encodeURIComponent(TOKEN)}`, { redirect: 'manual' });
+  const setCookie = response.headers.getSetCookie?.() ?? [];
+  const cookie = setCookie.find((item) => item.toLowerCase().startsWith('dsh-')) ?? setCookie[0] ?? '';
+  if (response.status !== 303 || cookie === '') return false;
+  COOKIE = cookie.split(';')[0];
+  return true;
+}
+
+/** 带登录 cookie 的请求头。 */
+function headers(extra = {}) {
+  return COOKIE === '' ? extra : { ...extra, cookie: COOKIE };
+}
 
 const results = [];
 function record(name, status, evidence) {
@@ -33,7 +60,11 @@ function record(name, status, evidence) {
 }
 
 async function getJson(path, init) {
-  const response = await fetch(new URL(path, BASE), { headers: { accept: 'application/json' }, ...init });
+  const response = await fetch(new URL(path, BASE), {
+    signal: AbortSignal.timeout(600_000),
+    ...init,
+    headers: headers({ accept: 'application/json', ...(init?.headers ?? {}) }),
+  });
   const text = await response.text();
   let body;
   try {
@@ -107,8 +138,20 @@ function todayIn(timeZone) {
   }).format(new Date());
 }
 
+async function checkAuthRequired() {
+  const response = await fetch(new URL('/ai-journal/api?kind=meta', BASE), {
+    headers: { accept: 'application/json' },
+  });
+  const ok = response.status === 401;
+  record('未登录调用被 401 拒绝', ok ? 'PASS' : 'FAIL', `HTTP ${response.status}（期望 401）`);
+}
+
 async function checkMeta() {
   const { status, body } = await getJson('/ai-journal/api?kind=meta');
+  if (status === 401) {
+    record('Host 路由已挂载（meta）', 'SKIP', 'HTTP 401：未登录（缺 --token）。');
+    return;
+  }
   const ok = status === 200
     && body.ok === true
     && body.services?.sessionController === true
@@ -119,33 +162,54 @@ async function checkMeta() {
 
 async function checkDaily() {
   const date = todayIn('Asia/Singapore');
+  const startedAt = Date.now();
   const { status, body } = await getJson(`/ai-journal/api?kind=daily&date=${date}&tz=Asia%2FSingapore`);
+  if (status === 401) {
+    record('日报接口形状', 'SKIP', 'HTTP 401：未登录（缺 --token）。');
+    return;
+  }
   const problems = status === 200 ? hasShape(body, 'daily') : [`HTTP ${status}`];
   record('日报接口形状', problems.length === 0 ? 'PASS' : 'FAIL',
-    `HTTP ${status} · date=${date} · empty=${body.empty} · sessions=${body.stats?.sessions} · blocks=${body.blocks?.length} · todos=${body.todos?.length} · followups=${body.stats?.followups} · deliverables=${body.stats?.deliverables}`
+    `HTTP ${status} · ${Date.now() - startedAt}ms · date=${date} · empty=${body.empty} · sessions=${body.stats?.sessions} · blocks=${body.blocks?.length} · todos=${body.todos?.length} · followups=${body.stats?.followups} · deliverables=${body.stats?.deliverables}`
     + (problems.length ? `\n问题：${problems.join('；')}` : ''));
 }
 
 async function checkWeekly() {
   const date = todayIn('Asia/Singapore');
+  const startedAt = Date.now();
   const { status, body } = await getJson(`/ai-journal/api?kind=weekly&date=${date}&tz=Asia%2FSingapore`);
+  if (status === 401) {
+    record('周报接口形状', 'SKIP', 'HTTP 401：未登录（缺 --token）。');
+    return;
+  }
   const problems = status === 200 ? hasShape(body, 'weekly') : [`HTTP ${status}`];
   if (status === 200 && body.days?.length !== 7) problems.push(`days 长度 ${body.days?.length} ≠ 7`);
   record('周报接口形状', problems.length === 0 ? 'PASS' : 'FAIL',
-    `HTTP ${status} · range=${body.range?.label ?? '-'} · sessions=${body.stats?.sessions} · blocks=${body.blocks?.length} · days=${body.days?.length} · followups=${body.stats?.followups} · deliverables=${body.stats?.deliverables}`
+    `HTTP ${status} · ${Date.now() - startedAt}ms · range=${body.range?.label ?? '-'} · sessions=${body.stats?.sessions} · blocks=${body.blocks?.length} · days=${body.days?.length} · followups=${body.stats?.followups} · deliverables=${body.stats?.deliverables}`
     + (problems.length ? `\n问题：${problems.join('；')}` : ''));
 }
 
 async function checkFence() {
   const response = await fetch(new URL('/ai-journal/api?kind=meta', BASE), {
-    headers: { origin: 'http://evil.example.com' },
+    headers: headers({ origin: 'http://evil.example.com' }),
   });
+  if (response.status === 401) {
+    record('跨站 Origin 被拒绝', 'SKIP', 'HTTP 401：未登录（缺 --token），无法区分 Origin fence。');
+    return;
+  }
   const ok = response.status === 403;
   record('跨站 Origin 被拒绝', ok ? 'PASS' : 'FAIL', `HTTP ${response.status}（期望 403）`);
 }
 
 async function checkReadOnly() {
-  const response = await fetch(new URL('/ai-journal/api?kind=meta', BASE), { method: 'POST' });
+  const response = await fetch(new URL('/ai-journal/api?kind=meta', BASE), {
+    method: 'POST',
+    headers: headers(),
+  });
+  if (response.status === 401) {
+    record('非 GET 请求被拒绝', 'SKIP', 'HTTP 401：未登录（缺 --token）。');
+    return;
+  }
   const ok = response.status === 405;
   record('非 GET 请求被拒绝', ok ? 'PASS' : 'FAIL', `HTTP ${response.status}（期望 405）`);
 }
@@ -155,7 +219,7 @@ async function checkFollowupDismiss() {
   const key = 'f'.repeat(40);
   const post = (body) => fetch(new URL(`/ai-journal/api/followups`, BASE), {
     method: 'POST',
-    headers: { origin: ORIGIN, 'content-type': 'application/json' },
+    headers: headers({ origin: ORIGIN, 'content-type': 'application/json' }),
     body: JSON.stringify(body),
   });
   try {
@@ -170,7 +234,7 @@ async function checkFollowupDismiss() {
     const bad = await post({ action: 'nope', key });
     const plain = await fetch(new URL('/ai-journal/api/followups', BASE), {
       method: 'POST',
-      headers: { origin: ORIGIN, 'content-type': 'text/plain' },
+      headers: headers({ origin: ORIGIN, 'content-type': 'text/plain' }),
       body: 'x',
     });
     const ok = restored.status === 200 && restoreBody.removed === true && bad.status === 400 && plain.status === 415;
@@ -183,7 +247,7 @@ async function checkFollowupDismiss() {
 
 /** 返回启动图 HTML；未登录时返回 undefined 并记 SKIP。 */
 async function checkBootGraph() {
-  const response = await fetch(new URL('/', BASE));
+  const response = await fetch(new URL('/', BASE), { headers: headers() });
   if (response.status === 401) {
     record('浏览器启动图包含插件', 'SKIP',
       'HTTP 401：DSH 首页需要浏览器登录 cookie，CLI 无法读取启动图。\n请在浏览器刷新 GUI 后人工确认左侧栏「AI 日报」入口。');
@@ -202,20 +266,30 @@ async function checkBundle(html) {
     record('客户端 bundle 可下载', 'SKIP', '依赖上一步的启动图；未登录时无法检查。');
     return;
   }
-  const match = html.match(/["']([^"']*\/plugins[^"']*dsh-ai-journal[^"']*)["']/);
+  const match = html.match(/["']([^"']*plugins[^"']*dsh-ai-journal[^"']*)["']/);
   if (match === null) {
     record('客户端 bundle 可下载', 'FAIL', '启动图里没有找到含 dsh-ai-journal 的 /plugins 地址');
     return;
   }
   const path = match[1].replaceAll('\\u0026', '&').replaceAll('&amp;', '&');
-  const response = await fetch(new URL(path, BASE));
+  const response = await fetch(new URL(path, BASE), {
+    signal: AbortSignal.timeout(600_000), headers: headers() });
   const text = await response.text();
   const ok = response.ok && text.includes('dsh-ai-journal');
   record('客户端 bundle 可下载', ok ? 'PASS' : 'FAIL',
     `HTTP ${response.status} · ${path.slice(0, 120)} · bytes=${text.length} · 含模块 id=${text.includes('dsh-ai-journal')}`);
 }
 
+const loggedIn = await login();
+if (!loggedIn) {
+  record('DSH Web 登录会话', 'SKIP',
+    TOKEN === ''
+      ? '未提供 --token：认证相关检查将返回 401 并记为 SKIP。\n用 dsh web 启动时打印的 URL 里的 ?token=… 重跑。'
+      : 'token 兑换失败（303/Set-Cookie 未出现），请确认 token 来自当前运行的 dsh web。');
+}
+
 const checks = [
+  ['auth-required', checkAuthRequired],
   ['meta', checkMeta],
   ['daily', checkDaily],
   ['weekly', checkWeekly],

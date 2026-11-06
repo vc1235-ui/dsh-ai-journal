@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1
+
+- 安全修复：Host 路由改为委托宿主 `connection.requestRejection(request)` —— Host/Origin fence 与浏览器登录 cookie 校验一起做；未认证调用返回 `401`，跨站返回 `403`，认证服务不可用时 fail closed（不再退回插件自己的回环同源判断）。感谢 dshopen 维护者 @polang233 指出。
+- 自检脚本支持 `--token`：用 `dsh web` 启动时打印的 `?token=…` 兑换登录 cookie，新增「未登录调用被 401 拒绝」检查；冷启动报告构建慢时给足超时。
+- 修复自检脚本对启动图里相对 `plugins/??…` 组合脚本地址的识别。
+
 ## 0.1.0
 
 - 首次发布：左侧栏「AI 日报」入口 + 面板。

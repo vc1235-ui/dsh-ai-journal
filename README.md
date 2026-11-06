@@ -63,7 +63,7 @@ dsh plugin --profile web add /path/to/dsh-ai-journal
 
 ## 隐私与安全
 
-- Host 接口只在本机回环 + 同源页面可用（跨站 Origin 403、非 GET 405）；
+- Host 接口先过宿主认证：每个请求交给 `connection.requestRejection(request)`（Host/Origin fence + 浏览器登录 cookie），未登录 401、跨站 403、认证服务缺失时 fail closed；再由接口自身拒绝非 GET 405；
 - 会话内容只在内存里聚合，不落盘、不联网、不上传；
 - 唯一写接口是「这不是待办」：`POST /ai-journal/api/followups`，只把 `key / 会话 id / 截断文案 / 时间` 写到 `$DSH_HOME/ai-journal/followups-dismissed.json`（最多 5000 条）；
 - 不读取飞书 Bot、IM、记忆插件等任何其它插件的存储或配置（Bot 会话在本机只是普通 DSH 会话，因此无需 bot 依赖）。
@@ -85,12 +85,12 @@ node --test test/dismissed.test.mjs    # 忽略存储 3 项
 node test/client.test.cjs              # 面板渲染 80 项（vm + mock）
 ```
 
-目录：`index.js`（Host 路由与取数）、`lib/journal.js`（纯聚合）、`lib/dismissed.js`（忽略记录）、`client.js`（浏览器面板）、`API-CONTRACT.md`（接口契约）、`test/`（离线测试）。
+目录：`index.js`（Host 路由与取数）、`lib/journal.js`（纯聚合）、`lib/dismissed.js`（忽略记录）、`lib/auth.js`（宿主认证 fence）、`client.js`（浏览器面板）、`API-CONTRACT.md`（接口契约）、`test/`（离线测试）。
 
-真实接口自检（需运行中的 Web）：
+真实接口自检（需运行中的 Web，认证用启动时打印的 `?token=`）：
 
 ```sh
-node scripts/verify.mjs http://127.0.0.1:3080
+node scripts/verify.mjs --url http://127.0.0.1:3080 --token <launch-token>
 ```
 
 ## 市场收录

@@ -1,6 +1,6 @@
 # API 契约：dsh-ai-journal（v3，2026-11-05）
 
-Host 半区 → Client 半区的唯一契约。只在本机同源可用；会话内容只在内存中聚合，不落盘（唯一的写接口是「这不是待办」的忽略记录，只存 key/会话 id/截断文案/时间）。
+Host 半区 → Client 半区的唯一契约。只对通过宿主认证的同源页面可用；会话内容只在内存中聚合，不落盘（唯一的写接口是「这不是待办」的忽略记录，只存 key/会话 id/截断文案/时间）。
 
 ## 路由
 
@@ -12,7 +12,8 @@ GET /ai-journal/api?kind=daily|weekly|meta&date=YYYY-MM-DD&tz=<IANA 时区>&refr
 - `date` 缺省 → 请求时区的今天；格式非法 → 同样回落到今天。周报的 `date` 可以是该周任意一天，Host 归一到周一。
 - `tz` 缺省 / 非法 → `Asia/Singapore`。
 - `refresh=1` 跳过 15 秒报告缓存。
-- 仅接受回环地址（`127.0.0.1` / `localhost` / `::1`）且非跨站请求；只接受 `GET` / `HEAD`。
+- 认证：每个请求先交给组成的 `connection.requestRejection(request)`，它同时执行 Host/Origin fence 与浏览器登录 cookie 校验；认证服务不在位时 fail closed（`401`），不退回插件自己的同源判断。
+- 未认证 → `401 unauthorized`；跨站 / 不可信 Host → `403 forbidden`；只接受 `GET` / `HEAD`（`405` 其它方法）。
 
 失败响应：
 
@@ -20,7 +21,7 @@ GET /ai-journal/api?kind=daily|weekly|meta&date=YYYY-MM-DD&tz=<IANA 时区>&refr
 { "ok": false, "code": "bad-request|forbidden|unavailable|internal", "message": "中文说明" }
 ```
 
-`403 forbidden`、`405`（非 GET/HEAD）、`503 unavailable`（组成缺少 `sessionController` 或 `sessionQuery`）、`500 internal`。
+`401 unauthorized`（未登录 / 认证服务不可用）、`403 forbidden`（跨站或不可信 Host）、`405`（非 GET/HEAD）、`503 unavailable`（组成缺少 `sessionController` 或 `sessionQuery`）、`500 internal`。
 
 ## 成功响应（daily / weekly 同构）
 
@@ -129,7 +130,7 @@ GET /ai-journal/api?kind=daily|weekly|meta&date=YYYY-MM-DD&tz=<IANA 时区>&refr
 
 - 请求：`Content-Type: application/json`，body `{ "action": "dismiss" | "restore", "key": "<40位sha1>", "sessionId": "…", "text": "…" }`；`key` 必须来自报告的 `followups[].key`；
 - 成功：`200 { ok: true, action, dismissed: <当前忽略总数>, persisted: <是否已落盘>, removed: <restore 是否真的删到> }`；
-- 失败：`400`（action/key 不合法）、`413`（body > 8KB）、`415`（非 JSON）、`403`（非同源）、`405`（其它方法/路径）；
+- 失败：`400`（action/key 不合法）、`413`（body > 8KB）、`415`（非 JSON）、`401`（未登录）、`403`（非同源）、`405`（其它方法/路径）；
 - 存储：`$DSH_HOME/ai-journal/followups-dismissed.json`（未设置 `$DSH_HOME` 时 `~/.dsh`），只存 `key/sessionId/截断text/dismissedAt`，最多 5000 条；文件损坏按空表处理；写盘失败时内存仍生效但 `persisted:false`；
 - 忽略后报告里该条消失；撤销后重新出现（客户端需重新拉取报告）。
 

@@ -13,6 +13,6 @@ jobs:
         with:
           node-version: 24
       - name: Aggregation tests
-        run: node --test test/journal.test.mjs test/dismissed.test.mjs
+        run: node --test test/journal.test.mjs test/dismissed.test.mjs test/auth.test.mjs
       - name: Panel rendering tests
         run: node test/client.test.cjs

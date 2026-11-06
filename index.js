@@ -7,6 +7,10 @@
  * 3. 在 `ctx.webServer` 上挂前缀路由：`GET /ai-journal/api` 供浏览器半区取数，
  *    `POST /ai-journal/api/followups` 记录「这不是待办」的忽略（落到 DSH home 的小 JSON）。
  *
+ * 每个请求先问组成里的 `connection.requestRejection(request)`：Host/Origin fence
+ * 加浏览器登录 cookie 校验一起做；认证服务不在位时 fail closed（401），不退回
+ * 插件自己的同源判断。见 `lib/auth.js`。
+ *
  * 不写会话日志、不联网。接口契约见 API-CONTRACT.md。
  *
  * @module dsh-ai-journal
@@ -21,6 +25,7 @@ import {
   weekStartKey,
 } from './lib/journal.js';
 import { createDismissedStore } from './lib/dismissed.js';
+import { rejectionForConnection } from './lib/auth.js';
 
 /** Loader 行 id。 */
 export const name = 'ai-journal';
@@ -66,25 +71,6 @@ async function readJsonBody(request, limit) {
 
 /** 路由前缀。 */
 const ROUTE = '/ai-journal/api';
-
-/** 判断请求是否来自本机同源页面（与 DSH 自带管理页同一套信任 fence）。 */
-function isTrustedRequest(request) {
-  const host = request.headers?.host;
-  if (typeof host !== 'string' || host === '') return false;
-  const hostname = host.replace(/^\[/, '').replace(/\]/, '').replace(/:\d+$/, '').toLowerCase();
-  const loopback = hostname === '127.0.0.1' || hostname === 'localhost' || hostname === '::1';
-  if (!loopback) return false;
-  if (request.headers?.['sec-fetch-site'] === 'cross-site') return false;
-  const origin = request.headers?.origin;
-  if (typeof origin === 'string' && origin !== '') {
-    try {
-      return new URL(origin).host === host;
-    } catch {
-      return false;
-    }
-  }
-  return true;
-}
 
 function sendJson(response, status, value) {
   const body = JSON.stringify(value);
@@ -240,8 +226,17 @@ export function apply(ctx) {
       kind: 'prefix',
       path: ROUTE,
       handler: async (request, response) => {
-        if (!isTrustedRequest(request)) {
-          sendJson(response, 403, { ok: false, code: 'forbidden', message: '仅允许本机同源页面访问。' });
+        const rejection = rejectionForConnection(webScope.get('connection'), request);
+        if (rejection !== 0) {
+          if (rejection === 403) {
+            sendJson(response, 403, { ok: false, code: 'forbidden', message: '仅允许本机同源页面访问。' });
+          } else {
+            sendJson(response, 401, {
+              ok: false,
+              code: 'unauthorized',
+              message: '需要 DSH Web 登录会话：请从 dsh web 打印的 URL 打开面板后再试。',
+            });
+          }
           return;
         }
         let url;
