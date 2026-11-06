@@ -1,6 +1,11 @@
 # 发布与收录指南 / Publishing & listing
 
-本仓库同时准备两个社区索引市场的收录。当前状态：GitHub 公开仓库 ✅，许可证 ✅，`dsh.bundle` 清单 ✅；**npm 发布 ⏳**（需要作者本人 `npm login`），npm 发布后即可提交两个市场。
+本仓库同时准备两个社区索引市场的收录。当前状态：GitHub 公开仓库 ✅，许可证 ✅，`dsh.bundle` 清单 ✅，预构建 tarball ✅（挂在 release v0.1.0）；**npm 发布可选**——两个市场都收录「没有 npm 包」的插件：
+
+- DSH 社区插件市场（awesome-dsh-plugin）：npm 是**可选**的，「发不发布都不影响收录」，插件照样从 GitHub 安装；没有 npm 时可在条目里用 `tarball:` 指向 release 里的预构建包。
+- dshopen.org：接受**固定的 GitHub 提交**（给出公开仓库、版本、完整 40 位 SHA），维护者核对归档并记录哈希；有 npm 版本时默认跟踪 npm `latest`，固定提交则需维护者在升级时重新核查。
+
+> 没有 npm 账号也能投稿，只是少了下载量展示与自动跟踪最新版。有 npm 账号时仍推荐发一份（安装更快、自动更新、市场显示下载量）。
 
 ## 0. 前置检查（已完成）
 
@@ -14,9 +19,9 @@
 | 离线测试 | ✅ 105 项（聚合 22 + 忽略存储 3 + 面板 80） |
 | npm 发布 | ⏳ `npm publish` 后完成 |
 
-## 1. npm 发布（两个市场都依赖）
+## 1. npm 发布（可选，推荐）
 
-包名 `dsh-ai-journal` 已确认在 npm registry 上可用（当前 404）。
+包名 `dsh-ai-journal` 已确认在 npm registry 上可用（当前 404）。若没有 npm 账号：打开 https://www.npmjs.com/signup 注册（用户名 + 邮箱 + 密码，验证邮件），然后执行下面的命令。
 
 ```sh
 cd dsh-ai-journal
@@ -63,12 +68,18 @@ git push -u origin add-dsh-ai-journal
 gh pr create --repo awesome-dsh-plugin/awesome-dsh-plugin --title "Add vc1235-ui/dsh-ai-journal" --body "Daily/weekly AI journal panel for DSH Web; public repo + npm release + MIT license."
 ```
 
+### 无 npm 账号时（已就绪的替代方案）
+
+- 仓库根已附预构建 tarball（`npm pack` 产物，与 `v0.1.0` 同一提交）：`https://github.com/vc1235-ui/dsh-ai-journal/releases/download/v0.1.0/dsh-ai-journal-0.1.0.tgz`；
+- awesome 条目已加 `tarball:` 字段（见 `marketplace/awesome-dsh-plugin-entry.yml`）；
+- dshopen 投稿改用 `marketplace/dshopen-issue-git.md`（固定提交 `37277904f925bd6aaf35aa53ebb72b3f4f358ffc`，版本 `0.1.0`）。
+
 ## 3. 开放插件市场（dshopen.org）
 
 - 索引：https://dshopen.org/index.json
 - 仓库：https://github.com/polang233/dsh-plugin-index
 - 入口：填写「插件收录」issue 表单 https://github.com/polang233/dsh-plugin-index/issues/new?template=plugin-add.yml
-- 要求：公开源码 + **可安装的 npm 版本** + 明确许可证（均可满足，npm 发布后即可）
+- 要求：公开源码 + **可安装的 npm 版本，或固定的 GitHub 提交** + 明确许可证（均可满足；无 npm 时用 `marketplace/dshopen-issue-git.md` 的固定提交正文）
 
 Issue 建议填写：
 
