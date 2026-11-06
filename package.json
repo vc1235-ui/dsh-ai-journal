@@ -1,0 +1,61 @@
+{
+  "name": "dsh-ai-journal",
+  "version": "0.1.0",
+  "description": "AI 日报：按天/按周汇总 DSH 会话里做过的事、归属目标与未完成事项，在左侧栏提供图形化面板入口。",
+  "license": "MIT",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "lib",
+    "locale/*.json",
+    "icon.svg",
+    "assets/icon-180.png",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "deepseek",
+    "ai-journal",
+    "daily-report",
+    "weekly-report"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vc1235-ui/dsh-ai-journal.git"
+  },
+  "homepage": "https://github.com/vc1235-ui/dsh-ai-journal#readme",
+  "bugs": {
+    "url": "https://github.com/vc1235-ui/dsh-ai-journal/issues"
+  },
+  "author": "vc1235-ui",
+  "engines": {
+    "dsh": ">=0.2.1-rc.5"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs && node test/client.test.cjs",
+    "test:client": "node test/client.test.cjs",
+    "test:journal": "node --test test/journal.test.mjs",
+    "test:dismissed": "node --test test/dismissed.test.mjs"
+  }
+}

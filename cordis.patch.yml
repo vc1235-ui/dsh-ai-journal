@@ -1,0 +1,5 @@
+# AI 日报 bundle 的加载器补丁：插入一行 Host 插件。
+# Host 半区挂载 /ai-journal/api 只读接口，Client 半区负责左侧栏入口与面板渲染。
+- insert:
+    - id: ai-journal
+      name: 'dsh-ai-journal'
