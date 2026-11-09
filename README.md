@@ -96,9 +96,11 @@ node scripts/verify.mjs --url http://127.0.0.1:3080 --token <launch-token>
 
 ## 市场收录
 
+[![dshopen 收录](https://img.shields.io/endpoint?url=https://dshopen.org/badge/dsh-ai-journal.json)](https://dshopen.org/plugins/dsh-ai-journal)
+
 - npm：[`dsh-ai-journal@0.1.2`](https://www.npmjs.com/package/dsh-ai-journal) ✅
-- 开放插件市场（dshopen.org）：✅ 已复核收录（[#283](https://github.com/polang233/dsh-plugin-index/issues/283) 已关闭，维护者确认 0.1.1 通过）
-- DSH 社区插件市场（awesome-dsh-plugin）：已提交 PR（[#13427](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/13427)）⏳
+- 开放插件市场（dshopen.org）：[已收录](https://dshopen.org/plugins/dsh-ai-journal) ✅（[#283](https://github.com/polang233/dsh-plugin-index/issues/283) 复核通过后关闭）
+- DSH 社区插件市场（awesome-dsh-plugin）：已提交 PR（[#13427](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/13427)）⏳，合并后补 `awesome-dsh-plugin.com` 徽章
 
 完整流程见 [PUBLISHING.md](PUBLISHING.md)。
 
