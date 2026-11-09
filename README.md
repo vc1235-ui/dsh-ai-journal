@@ -59,6 +59,7 @@ dsh plugin --profile web add /path/to/dsh-ai-journal
 - **未完成**：会话最新 `todo/write` 快照里的 `pending` / `in_progress`，加上 `active` / `blocked` 的目标。
 - **交付物**：会话事件 `deliverables/presented` 里的文件；点击走宿主认证的 `POST /api/present.open`，在桌面打开。
 - **待跟进**：只扫窗口内人类输入，命中固定措辞集合，每会话 ≤4 条、整份 ≤12 条、同句去重；不判断是否真的未完成，因此界面标注「可能不准确」。
+- **自动触发**：定时任务 / 脚本 / 机器人触发的会话（标题或输入带 `[…自动触发…]` 等标记，或工作目录在 `~/.dsh/migrated-cron/`、`~/.dsh/bot/`）整体不计入，包括「待跟进」。
 - 结果为空时不编造内容。精确数字由程序从会话事件统计，不经过模型改写。
 
 ## 隐私与安全
@@ -95,8 +96,8 @@ node scripts/verify.mjs --url http://127.0.0.1:3080 --token <launch-token>
 
 ## 市场收录
 
-- npm：[`dsh-ai-journal@0.1.1`](https://www.npmjs.com/package/dsh-ai-journal) ✅
-- 开放插件市场（dshopen.org）：收录申请已提交（[#283](https://github.com/polang233/dsh-plugin-index/issues/283)）⏳
+- npm：[`dsh-ai-journal@0.1.2`](https://www.npmjs.com/package/dsh-ai-journal) ✅
+- 开放插件市场（dshopen.org）：✅ 已复核收录（[#283](https://github.com/polang233/dsh-plugin-index/issues/283) 已关闭，维护者确认 0.1.1 通过）
 - DSH 社区插件市场（awesome-dsh-plugin 镜像）：待仓库满 24h 后提交 PR ⏳
 
 完整流程见 [PUBLISHING.md](PUBLISHING.md)。

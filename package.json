@@ -1,6 +1,6 @@
 {
   "name": "dsh-ai-journal",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "AI 日报：按天/按周汇总 DSH 会话里做过的事、归属目标与未完成事项，在左侧栏提供图形化面板入口。",
   "license": "MIT",
   "type": "module",

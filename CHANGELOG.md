@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+- 日报/周报口径：自动触发的会话（定时任务、脚本、机器人）不再计入——既不进会话数/轮次/分块/待办，也不再出现在「待跟进（会话里提到、未写入待办）」里。判定依据：标题或前两条输入带 `[…自动触发…]` / `[定时任务]` / `[cron]` 标记，或工作目录在 `~/.dsh/migrated-cron/`、`~/.dsh/bot/` 下；普通方括号标题（如 `[个人项目]`）不受影响。新增 `isAutoTriggeredSession()` 与 5 项离线测试。
+
 ## 0.1.1
 
 - 安全修复：Host 路由改为委托宿主 `connection.requestRejection(request)` —— Host/Origin fence 与浏览器登录 cookie 校验一起做；未认证调用返回 `401`，跨站返回 `403`，认证服务不可用时 fail closed（不再退回插件自己的回环同源判断）。感谢 dshopen 维护者 @polang233 指出。

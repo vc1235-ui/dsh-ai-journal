@@ -8,6 +8,7 @@ Host 半区 → Client 半区的唯一契约。只对通过宿主认证的同源
 GET /ai-journal/api?kind=daily|weekly|meta&date=YYYY-MM-DD&tz=<IANA 时区>&refresh=1
 ```
 
+- 统计口径：自动触发的会话（定时任务 / 脚本 / 机器人，判定见下）不计入会话数、轮次、分块、待办与待跟进。
 - `kind` 缺省 / 非法 → `daily`；`meta` 返回诊断信息，不读会话。
 - `date` 缺省 → 请求时区的今天；格式非法 → 同样回落到今天。周报的 `date` 可以是该周任意一天，Host 归一到周一。
 - `tz` 缺省 / 非法 → `Asia/Singapore`。
@@ -133,6 +134,15 @@ GET /ai-journal/api?kind=daily|weekly|meta&date=YYYY-MM-DD&tz=<IANA 时区>&refr
 - 失败：`400`（action/key 不合法）、`413`（body > 8KB）、`415`（非 JSON）、`401`（未登录）、`403`（非同源）、`405`（其它方法/路径）；
 - 存储：`$DSH_HOME/ai-journal/followups-dismissed.json`（未设置 `$DSH_HOME` 时 `~/.dsh`），只存 `key/sessionId/截断text/dismissedAt`，最多 5000 条；文件损坏按空表处理；写盘失败时内存仍生效但 `persisted:false`；
 - 忽略后报告里该条消失；撤销后重新出现（客户端需重新拉取报告）。
+
+### 自动触发会话的判定
+
+Host 半区在提取会话事实时按可观察痕迹判定 `autoTriggered`，为 true 的会话不进入报告：
+
+- 标题或前两条人类输入以 `[...]` 标记开头且含「自动触发 / 自动任务 / 定时任务 / 自动运行 / 自动化 / cron / automation」；
+- 会话工作目录在 `~/.dsh/migrated-cron/` 或 `~/.dsh/bot/` 下。
+
+普通方括号标题（如 `[个人项目] 提案`）与普通工作区不受影响。
 
 ### DayStat
 

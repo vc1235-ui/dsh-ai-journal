@@ -16,6 +16,7 @@ import {
   dayLabelZh,
   dayStartMs,
   extractSessionFacts,
+  isAutoTriggeredSession,
   normalizeTimeZone,
   projectLabel,
   weekStartKey,
@@ -587,4 +588,121 @@ test('读取失败的会话不进入报告，但记入 failures', () => {
   assert.equal(report.empty, true);
   assert.equal(report.failures.length, 1);
   assert.equal(report.failures[0].sessionId, 'bad');
+});
+
+/* ------------------------------------------------------------------ */
+/* 自动触发会话（定时任务 / 脚本 / 机器人）                              */
+/* ------------------------------------------------------------------ */
+
+test('自动触发：带「自动触发」标记的会话不计入日报与待跟进', () => {
+  const day = '2026-11-05';
+  const facts = [
+    sessionFacts({
+      sessionId: 'auto-1',
+      cwd: '/Users/sunxx/Documents/个人AI',
+      events: [
+        userMessage(at(day, 9), '[伙伴记忆同步 · DSH 自动触发] 这份同步待确认后再继续'),
+        title(at(day, 9, 1), '[伙伴记忆同步 · DSH 自动触发]'),
+        turnStart(at(day, 9, 2)),
+      ],
+    }),
+    sessionFacts({
+      sessionId: 'human-1',
+      events: [
+        userMessage(at(day, 10), '发布前记得提醒我检查待确认项'),
+        title(at(day, 10, 1), '发布检查'),
+        turnStart(at(day, 10, 2)),
+      ],
+    }),
+  ];
+  const report = buildReport({ kind: 'daily', dateKey: day, tz: TZ, facts, now: at(day, 23) });
+  assert.equal(report.stats.sessions, 1, '自动触发会话不计数');
+  assert.equal(report.followups.length, 1, '待跟进里只剩人类会话那条');
+  assert.equal(report.followups[0].sessionId, 'human-1');
+  assert.ok(!JSON.stringify(report.blocks).includes('伙伴记忆同步'), '分块里不应出现自动触发会话');
+});
+
+test('自动触发：脚本探针与 IM 桥接会话不计入', () => {
+  const day = '2026-11-05';
+  const facts = [
+    sessionFacts({
+      sessionId: 'probe-1',
+      cwd: '/Users/sunxx',
+      events: [userMessage(at(day, 8), '只回答两个字：正常'), title(at(day, 8, 1), '只回答两个字：正常')],
+    }),
+    sessionFacts({
+      sessionId: 'bridge-1',
+      cwd: '/Users/sunxx/.dsh/migrated-cron',
+      events: [userMessage(at(day, 8, 20), '你是孙志濂（飞书用户，open_id ou_19）的助理。脚本…这份提案待确认后再发'), title(at(day, 8, 21), 'IM 桥接')],
+    }),
+    sessionFacts({
+      sessionId: 'human-2',
+      cwd: '/Users/sunxx',
+      events: [userMessage(at(day, 9), '我通过 dsh-im 链接了飞书的通道，但表情回应没有消息回应'), title(at(day, 9, 1), 'IM 通道排查')],
+    }),
+  ];
+  const report = buildReport({ kind: 'daily', dateKey: day, tz: TZ, facts, now: at(day, 23) });
+  assert.equal(report.stats.sessions, 1);
+  assert.equal(report.followups.length, 0, '自动触发的「待确认」不应出现在待跟进里');
+});
+
+test('自动触发：定时任务模板与 bot 工作区的会话不计入', () => {
+  const day = '2026-11-05';
+  const cron = sessionFacts({
+    sessionId: 'cron-1',
+    cwd: '/Users/sunxx/tools/flomo-daily-tool',
+    events: [
+      userMessage(at(day, 8), '# DSH 每日事实记录 · 生成（2026-11-05）后续再确认'),
+      title(at(day, 8, 1), '每日事实记录'),
+    ],
+  });
+  const bot = sessionFacts({
+    sessionId: 'bot-1',
+    cwd: '/Users/sunxx/.dsh/bot/workspace',
+    events: [userMessage(at(day, 8, 30), '同步一下今天的进展'), title(at(day, 8, 31), 'Bot 协作')],
+  });
+  const human = sessionFacts({
+    sessionId: 'human-1',
+    cwd: '/Users/sunxx/Documents/个人AI',
+    events: [userMessage(at(day, 10), '发布前记得提醒我检查待确认项'), title(at(day, 10, 1), '发布检查')],
+  });
+  const facts = [cron, bot, human];
+  const report = buildReport({ kind: 'daily', dateKey: day, tz: TZ, facts, now: at(day, 23) });
+  assert.equal(report.stats.sessions, 1);
+  assert.equal(report.followups.length, 1);
+  assert.equal(report.followups[0].sessionId, 'human-1');
+});
+
+test('自动触发：普通方括号标题与正文不受影响', () => {
+  const day = '2026-11-05';
+  const facts = [
+    sessionFacts({
+      sessionId: 'normal-1',
+      events: [
+        userMessage(at(day, 11), '[个人项目] 这份提案待确认后再发'),
+        title(at(day, 11, 1), '[个人项目] 提案整理'),
+      ],
+    }),
+  ];
+  const report = buildReport({ kind: 'daily', dateKey: day, tz: TZ, facts, now: at(day, 23) });
+  assert.equal(report.stats.sessions, 1);
+  assert.equal(report.followups.length, 1);
+});
+
+test('自动触发：判定只认标记与本机自动化工作区', () => {
+  assert.equal(isAutoTriggeredSession({ title: '[定时任务] 巡检' }), true);
+  assert.equal(isAutoTriggeredSession({ title: '', prompts: [{ text: '[cron] 每日同步' }] }), true);
+  assert.equal(isAutoTriggeredSession({ prompts: [{ text: '# 飞书×Codeup 投影对账 · 今日摘要（2026-11-06）' }] }), true);
+  assert.equal(isAutoTriggeredSession({ prompts: [{ text: '只回答两个字：正常' }] }), true, '一次性脚本探针');
+  assert.equal(isAutoTriggeredSession({ prompts: [{ text: '只输出这段 JSON，不要任何其它文字：{"a":1}' }] }), true);
+  assert.equal(isAutoTriggeredSession({ prompts: [{ text: '你是孙志濂（飞书用户，open_id ou_19）的助理。脚本…' }] }), true, '飞书 IM 桥接');
+  assert.equal(isAutoTriggeredSession({ prompts: [{ text: '你负责共享任务 task-1（先 team_task_get task-1 读全文，然后 claim 它）。' }] }), true, 'Agent Teams 队友');
+  assert.equal(isAutoTriggeredSession({ prompts: [{ text: '你是 DSH 插件项目的客户端实现者。请先读取共享任务 task-1（用 team_task_get），再开始。' }] }), true);
+  assert.equal(isAutoTriggeredSession({ cwd: '/home/u/.dsh/bot/workspace' }), true);
+  assert.equal(isAutoTriggeredSession({ cwd: '/home/u/.dsh/migrated-cron', prompts: [{ text: '你好，帮我看看这个方案' }] }), false,
+    'migrated-cron 目录本身不判定，那里也承载飞书 IM 转进来的真人消息');
+  assert.equal(isAutoTriggeredSession({ prompts: [{ text: '创建一个带左侧栏入口的 DSH 插件，总结我每天的 AI 日报' }] }), false);
+  assert.equal(isAutoTriggeredSession({ title: '[个人项目] 提案' }), false);
+  assert.equal(isAutoTriggeredSession({ cwd: '/home/u/projects/app' }), false);
+  assert.equal(isAutoTriggeredSession({}), false);
 });
